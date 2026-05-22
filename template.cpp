@@ -23,6 +23,9 @@
 #define s second
 #define rs resize
 
+#define INF 0x3f3f3f3f;
+#define NINF -0x3f3f3f3f
+
 #define fast_io() ios::sync_with_stdio(false); cin.tie(nullptr);
 #define dbg(x) cerr << #x << " = " << x << "\n"
 
