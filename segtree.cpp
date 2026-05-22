@@ -1,26 +1,26 @@
-template<typename T>
+template<typename T, typename F>
 struct SegTree {
     int n;
     vector<T> t;
     T neutral;
-    function<T(const T&, const T&)> combine;
+    F combine;
 
-    SegTree(int _n, T _neutral, function<T(const T&, const T&)> _combine) {
+    SegTree(int _n, T _neutral, F _combine) {
         this->n = _n;
         this->neutral = _neutral;
         this->combine = _combine;
         this->t.assign(4 * this->n, this->neutral);
     }
 
-    SegTree(vector<T>& _a, T _neutral, function<T(const T&, const T&)> _combine) {
-        this->n = _a.size();
+    SegTree(const vector<T>& _a, T _neutral, F _combine) {
+        this->n = (int) _a.size(); // narrowing conversion, explicit type cast better
         this->neutral = _neutral;
         this->combine = _combine;
         this->t.assign(4 * this->n, this->neutral);
         this->build(1, 0, this->n - 1, _a);
     }
 
-    void build(int pos, int tl, int tr, vector<T>& a) {
+    void build(int pos, int tl, int tr, const vector<T>& a) {
         if (tl == tr) {
             this->t[pos] = a[tl];
             return;
