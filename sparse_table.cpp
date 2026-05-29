@@ -1,13 +1,12 @@
 template<typename T, typename F>
 struct SparseTable{
-	vector<vector<T> > table;
+	vector<vector<T>> table;
 	int length, max_log;
   F operation;
 
-	SparseTable(const vector<T> &vec, const F &operation){
+	SparseTable(const vector<T> &vec, const F &operation) : operation(operation) {
 		this->length = vec.size();
 		this->max_log = __lg(this->length)+1;
-		this->operation = operation;
 		this->table.assign(this->max_log+1, vector<T>(this->length));
 		for (int j = 0; j<this->length; j++) this->table[0][j] = vec[j];
 		for (int i = 1; i<=max_log; i++){
