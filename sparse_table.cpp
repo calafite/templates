@@ -2,7 +2,7 @@ template<typename T, typename F>
 struct SparseTable{
 	vector<vector<T> > table;
 	int length, max_log;
-	F operation;
+  F operation;
 
 	SparseTable(const vector<T> &vec, const F &operation){
 		this->length = vec.size();
