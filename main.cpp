@@ -1,4 +1,5 @@
 #include <bits/stdc++.h>
+#include <calafite/calafite.hpp>
 
 #define ll long long
 #define ull unsigned long long
@@ -36,5 +37,8 @@
 #define endl "\n"
 
 using namespace std;
+using namespace calafite;
 
-int main() { fast_io(); }
+int main() {
+  fast_io();
+}

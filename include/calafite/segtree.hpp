@@ -1,17 +1,17 @@
 #pragma once
 #include <bits/stdc++.h>
-using namespace std;
 
+namespace calafite {
 template <typename T, typename F> struct SegTreeIterative {
   int n;
-  vector<T> t;
+  std::vector<T> t;
   T neutral;
   F combine;
 
   SegTreeIterative(int n, T neutral, F combine)
       : n(n), t(2 * n, neutral), neutral(neutral), combine(move(combine)) {}
 
-  SegTreeIterative(const vector<T> &a, T neutral, F combine)
+  SegTreeIterative(const std::vector<T> &a, T neutral, F combine)
       : n((int)a.size()), t(2 * a.size(), neutral), neutral(neutral),
         combine(move(combine)) {
     for (int i = 0; i < n; i++)
@@ -37,3 +37,4 @@ template <typename T, typename F> struct SegTreeIterative {
     return combine(resL, resR);
   }
 };
+} // namespace calafite

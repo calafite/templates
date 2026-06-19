@@ -1,15 +1,15 @@
 #pragma once
 #include <bits/stdc++.h>
-using namespace std;
 
+namespace calafite {
 template <typename T> struct LinearSieve {
   static_assert(
-      is_integral_v<T> && is_signed_v<T> && sizeof(T) >= 4,
+      std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) >= 4,
       "T must be a signed integer of at least 32 bits (int, long, long long)");
 
   T n;
-  vector<T> primes;
-  vector<T> spf;
+  std::vector<T> primes;
+  std::vector<T> spf;
 
   LinearSieve(T n) : n(n), spf(n + 1, 0) {
     if (n >= 2)
@@ -42,9 +42,9 @@ template <typename T> struct LinearSieve {
                           primes.begin());
   }
 
-  vector<pair<T, int>> factorize(T x) const {
+  std::vector<std::pair<T, int>> factorize(T x) const {
     assert(x >= 1 && x <= n);
-    vector<pair<T, int>> factors;
+    std::vector<std::pair<T, int>> factors;
     while (x > 1) {
       T p = spf[x];
       int e = 0;
@@ -57,3 +57,4 @@ template <typename T> struct LinearSieve {
     return factors;
   }
 };
+} // namespace calafite

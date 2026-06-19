@@ -1,14 +1,14 @@
 #pragma once
 #include <bits/stdc++.h>
-using namespace std;
 
+namespace calafite {
 template <typename T = int> struct Sieve {
-  static_assert(is_integral_v<T> && is_signed_v<T> && sizeof(T) >= 4,
+  static_assert(std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) >= 4,
                 "T must be a signed integer of at least 32 bits");
 
   int n;
-  vector<bool> is_prime;
-  vector<int> primes;
+  std::vector<bool> is_prime;
+  std::vector<int> primes;
 
   Sieve(int n) : n(n), is_prime(n + 1, true) {
     if (n >= 0)
@@ -49,3 +49,4 @@ template <typename T = int> struct Sieve {
         primes.begin());
   }
 };
+} // namespace calafite
