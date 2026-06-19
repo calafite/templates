@@ -1,44 +1,59 @@
-template<typename T>
-struct LinearSieve{
-    T n;
-    vector<T> primes;
-    vector<T> spf;
+#pragma once
+#include <bits/stdc++.h>
+using namespace std;
 
-    LinearSieve(T n) : n(n), spf(n+1, 0){
-        for (T i = 2; i <= this->n; i++){
-            if (!this->spf[i]){
-                this->spf[i] = i;
-                this->primes.pb(i);
-            }
-            for (T p : this->primes){
-                if (i*p > this->n) break;
-                this->spf[i*p] = p;
-                if (p == this->spf[i]) break;
-            }
-        }
-    }
+template <typename T> struct LinearSieve {
+  static_assert(
+      is_integral_v<T> && is_signed_v<T> && sizeof(T) >= 4,
+      "T must be a signed integer of at least 32 bits (int, long, long long)");
 
-    bool query(T x){
-        if (x < 2 || x > this->n) return false;
-        return this->spf[x] == x;
-    }
+  T n;
+  vector<T> primes;
+  vector<T> spf;
 
-    T count(T x){
-        x = min(x, this->n);
-        return (T)(upper_bound(all(this->primes), x) - this->primes.begin());
+  LinearSieve(T n) : n(n), spf(n + 1, 0) {
+    if (n >= 2)
+      primes.reserve(
+          static_cast<size_t>(n / log(static_cast<double>(n)) * 1.2) + 16);
+    for (T i = 2; i <= this->n; i++) {
+      if (!spf[i]) {
+        spf[i] = i;
+        primes.push_back(i);
+      }
+      for (T p : primes) {
+        if (p > this->n / i)
+          break;
+        spf[i * p] = p;
+        if (p == spf[i])
+          break;
+      }
     }
+  }
 
-    vector<pair<T, int>> factorize(T x){
-        vector<pair<T, int>> factors;
-        while (x > 1){
-            T p = this->spf[x];
-            int count = 0;
-            do {
-                count++;
-                x /= p;
-            } while (x > 1 && this->spf[x] == p);
-            factors.pb({p, count});
-        }
-        return factors;
+  bool query(T x) const {
+    if (x < 2 || x > n)
+      return false;
+    return spf[x] == x;
+  }
+
+  T count(T x) const {
+    x = min(x, n);
+    return static_cast<T>(upper_bound(primes.begin(), primes.end(), x) -
+                          primes.begin());
+  }
+
+  vector<pair<T, int>> factorize(T x) const {
+    assert(x >= 1 && x <= n);
+    vector<pair<T, int>> factors;
+    while (x > 1) {
+      T p = spf[x];
+      int e = 0;
+      do {
+        e++;
+        x /= p;
+      } while (x > 1 && spf[x] == p);
+      factors.push_back({p, e});
     }
+    return factors;
+  }
 };

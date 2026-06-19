@@ -1,60 +1,52 @@
-struct FenwickTree{
-	vector<long long> bits;
-	long long sz = 0;
-	long long log2sz = 1;
+#pragma once
+#include <bits/stdc++.h>
+using namespace std;
 
-	FenwickTree(long long n){
-		this->sz = n;
-		this->bits.assign(this->sz+1, 0);
-		while (this->log2sz<this->sz) this->log2sz <<= 1;
-	}
+template <typename T> struct FenwickTree {
+  vector<T> bits;
+  int sz, highbit;
 
-	FenwickTree(const vector<long long> &a){
-		this->sz = (long long)a.size();
-		this->bits.assign(this->sz+1, 0);
-		for (long long i = 1; i<=this->sz; i++){
-			this->bits[i] += a[i-1];
-			long long j = i+(i&-i);
-			if (j<=this->sz) this->bits[j] += this->bits[i];
-		}
-		while (this->log2sz<this->sz) this->log2sz <<= 1;
-	}
+  FenwickTree(int n) : sz(n), highbit(1), bits(n + 1, T(0)) {
+    while (highbit < sz)
+      highbit <<= 1;
+  }
 
-	long long query(long long i) const{
-		i++;
-		long long ans = 0;
-		while (i>0){
-			ans += this->bits[i];
-			i -= (i&-i);
-		}
-		return ans;
-	}
+  FenwickTree(const vector<T> &a)
+      : sz((int)a.size()), highbit(1), bits(a.size() + 1, T(0)) {
+    for (int i = 1; i <= sz; i++) {
+      bits[i] += a[i - 1];
+      int j = i + (i & -i);
+      if (j <= sz)
+        bits[j] += bits[i];
+    }
+    while (highbit < sz)
+      highbit <<= 1;
+  }
 
-	long long query(long long l, long long r) const{
-		return this->query(r)-this->query(l-1);
-	}
+  T query(int i) const {
+    T ans = T(0);
+    for (i++; i > 0; i -= i & -i)
+      ans += bits[i];
+    return ans;
+  }
 
-	void update(long long i, long long add){
-		i++;
-		while (i<=this->sz){
-			this->bits[i] += add;
-			i += (i&-i);
-		}
-	}
+  T query(int l, int r) const { return query(r) - query(l - 1); }
 
-	void set(long long i, long long val){
-		this->update(i, val-this->query(i, i));
-	}
+  void update(int i, T add) {
+    for (i++; i <= sz; i += i & -i)
+      bits[i] += add;
+  }
 
-	long long kth(long long k) const{
-		long long pos = 0;
-		for (long long pw = this->log2sz; pw>0; pw >>= 1){
-			if (pos+pw<=this->sz&&this->bits[pos+pw]<k){
-				pos += pw;
-				k -= this->bits[pos];
-			}
-		}
-		return pos;
-	}
+  void set(int i, T val) { update(i, val - query(i, i)); }
+
+  int kth(T k) const {
+    int pos = 0;
+    for (int pw = highbit; pw > 0; pw >>= 1) {
+      if (pos + pw <= sz && bits[pos + pw] < k) {
+        pos += pw;
+        k -= bits[pos];
+      }
+    }
+    return pos;
+  }
 };
-
