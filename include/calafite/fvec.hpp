@@ -114,6 +114,24 @@ template <typename T> struct fvec {
 
   ~fvec() { clear(); }
 
+  inline void reserve(size_t n) {
+    if (n > cap) {
+      T *new_data = static_cast<T *>(arena::allocate(n * sizeof(T), alignof(T)));
+      if (data_ptr && sz > 0) {
+        if constexpr (std::is_trivially_copyable_v<T>) {
+          std::memcpy(new_data, data_ptr, sz * sizeof(T));
+        } else {
+          for (size_t i = 0; i < sz; i++) {
+            new (&new_data[i]) T(std::move(data_ptr[i]));
+            if constexpr (!std::is_trivially_destructible_v<T>) data_ptr[i].~T();
+          }
+        }
+      }
+      data_ptr = new_data;
+      cap = n;
+    }
+  }
+
   inline void grow() {
     size_t new_cap = cap == 0 ? 4 : cap * 2;
     T *new_data = static_cast<T *>(arena::allocate(new_cap * sizeof(T), alignof(T)));
@@ -185,6 +203,17 @@ template <typename T> struct fvec {
       }
     }
     sz = n;
+  }
+
+  inline void assign(size_t n, const T &val) {
+    T copy = val;
+    clear();
+    if (n > cap) {
+      data_ptr = static_cast<T *>(arena::allocate(n * sizeof(T), alignof(T)));
+      cap = n;
+    }
+    sz = n;
+    for (size_t i = 0; i < n; i++) new (&data_ptr[i]) T(copy);
   }
 
   inline T &operator[](size_t i) { assert(i < sz); return data_ptr[i]; }

@@ -1,8 +1,8 @@
 #pragma once
-#include <vector>
-#include <cmath>
-#include <cassert>
 #include <algorithm>
+#include <cassert>
+#include <cmath>
+#include "fvec.hpp"
 
 namespace calafite {
 template <typename T = int> struct Sieve {
@@ -10,8 +10,8 @@ template <typename T = int> struct Sieve {
                 "T must be a signed integer of at least 32 bits");
 
   int n;
-  std::vector<bool> is_prime;
-  std::vector<int> primes;
+  fvec<bool> is_prime;
+  fvec<int> primes;
 
   Sieve(int n) : n(n), is_prime(n + 1, true) {
     if (n >= 0)
@@ -44,11 +44,11 @@ template <typename T = int> struct Sieve {
   }
 
   T count(T x) const {
-    x = min(static_cast<T>(n), x);
+    x = std::min(static_cast<T>(n), x);
     if (x < 2)
       return 0;
     return static_cast<T>(
-        upper_bound(primes.begin(), primes.end(), static_cast<int>(x)) -
+        std::upper_bound(primes.begin(), primes.end(), static_cast<int>(x)) -
         primes.begin());
   }
 };

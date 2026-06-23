@@ -1,17 +1,18 @@
 #pragma once
-#include <vector>
+#include "fvec.hpp"
+#include <utility>
 
 namespace calafite {
 template <typename T, typename F> struct SegTreeIterative {
   int n;
-  std::vector<T> t;
+  fvec<T> t;
   T neutral;
   F combine;
 
   SegTreeIterative(int n, T neutral, F combine)
       : n(n), t(2 * n, neutral), neutral(neutral), combine(std::move(combine)) {}
 
-  SegTreeIterative(const std::vector<T> &a, T neutral, F combine)
+  SegTreeIterative(const fvec<T> &a, T neutral, F combine)
       : n((int)a.size()), t(2 * a.size(), neutral), neutral(neutral),
         combine(std::move(combine)) {
     for (int i = 0; i < n; i++)

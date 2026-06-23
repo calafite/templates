@@ -1,8 +1,8 @@
 #pragma once
 #include <cmath>
-#include <vector>
+#include <algorithm>
 #include <cassert>
-
+#include "fvec.hpp"
 
 namespace calafite {
 template <typename T> struct LinearSieve {
@@ -11,8 +11,8 @@ template <typename T> struct LinearSieve {
       "T must be a signed integer of at least 32 bits (int, long, long long)");
 
   T n;
-  std::vector<T> primes;
-  std::vector<T> spf;
+  fvec<T> primes;
+  fvec<T> spf;
 
   LinearSieve(T n) : n(n), spf(n + 1, 0) {
     if (n >= 2)
@@ -40,14 +40,14 @@ template <typename T> struct LinearSieve {
   }
 
   T count(T x) const {
-    x = min(x, n);
-    return static_cast<T>(upper_bound(primes.begin(), primes.end(), x) -
+    x = std::min(x, n);
+    return static_cast<T>(std::upper_bound(primes.begin(), primes.end(), x) -
                           primes.begin());
   }
 
-  std::vector<std::pair<T, int>> factorize(T x) const {
+  fvec<std::pair<T, int>> factorize(T x) const {
     assert(x >= 1 && x <= n);
-    std::vector<std::pair<T, int>> factors;
+    fvec<std::pair<T, int>> factors;
     while (x > 1) {
       T p = spf[x];
       int e = 0;
@@ -55,7 +55,7 @@ template <typename T> struct LinearSieve {
         e++;
         x /= p;
       } while (x > 1 && spf[x] == p);
-      factors.push_back({p, e});
+      factors.emplace_back(p, e);
     }
     return factors;
   }

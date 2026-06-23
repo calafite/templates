@@ -1,16 +1,18 @@
 #pragma once
-#include <vector>
+#include "fvec.hpp"
+#include <algorithm>
+#include <utility>
 
 namespace calafite {
 template <typename T, typename F> struct SparseTable {
   int n;
-  std::vector<std::vector<T>> st;
+  fvec<fvec<T>> st;
   F combine;
 
-  SparseTable(const std::vector<T> &a, F combine)
+  SparseTable(const fvec<T> &a, F combine)
       : n(a.size()), combine(std::move(combine)) {
     int k = std::__lg(n) + 1;
-    st.assign(k, std::vector<T>(n));
+    st.assign(k, fvec<T>(n));
     st[0] = a;
     for (int i = 1; i < k; i++) {
       for (int j = 0; j + (1 << i) <= n; j++) {
