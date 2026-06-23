@@ -5,3 +5,4 @@
 #include "segtree.hpp"
 #include "sieve.hpp"
 #include "sparse_table.hpp"
+#include "arena.hpp"

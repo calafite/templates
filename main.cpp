@@ -37,8 +37,12 @@
 #define endl "\n"
 
 using namespace std;
-using namespace calafite;
+
+CALAFITE_MAKE_ARENA_GLOBAL()
 
 int main() {
   fast_io();
+
+  calafite::arena::ScopedArena _arena;
+
 }
