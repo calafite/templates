@@ -9,118 +9,26 @@
 #include <vector>
 
 #if defined(_WIN32)
-#define CALAFITE_FREAD _fread_nolock
-#define CALAFITE_FWRITE _fwrite_nolock
-#elif defined(__linux__) || defined(__CYGWIN__)
-#define CALAFITE_FREAD fread_unlocked
-#define CALAFITE_FWRITE fwrite_unlocked
+#include <io.h>
+#define CALAFITE_READ(buf, sz) _read(0, buf, (unsigned int)(sz))
+#define CALAFITE_WRITE(buf, sz) _write(1, buf, (unsigned int)(sz))
 #else
-#define CALAFITE_FREAD fread
-#define CALAFITE_FWRITE fwrite
+#include <unistd.h>
+#define CALAFITE_READ(buf, sz) read(0, buf, sz)
+#define CALAFITE_WRITE(buf, sz) write(1, buf, sz)
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
 #define CALAFITE_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define CALAFITE_UNLIKELY(x) (x)
+#endif
 
 namespace calafite {
 namespace io {
 
-struct Scanner {
-  static constexpr size_t BUF_SIZE = 1 << 17; // 128KB buffer
-  char buf[BUF_SIZE];
-  char *ptr = buf;
-  char *end = buf;
-  bool eof_flag = false;
-
-  inline bool reload() {
-    size_t res = CALAFITE_FREAD(buf, 1, BUF_SIZE, stdin);
-    ptr = buf;
-    end = buf + res;
-    if (res == 0)
-      eof_flag = true;
-    return res > 0;
-  }
-
-  inline char get_char() {
-    if (CALAFITE_UNLIKELY(ptr == end)) {
-      if (!reload())
-        return EOF;
-    }
-    return *ptr++;
-  }
-
-  inline char skip_whitespace() {
-    char c;
-    while ((c = get_char()) != EOF && c <= ' ') {
-    }
-    return c;
-  }
-
-  explicit operator bool() const { return !eof_flag; }
-
-  template <typename T>
-  inline std::enable_if_t<std::is_integral_v<T>, Scanner &> operator>>(T &val) {
-    val = 0;
-    char c = skip_whitespace();
-    if (CALAFITE_UNLIKELY(c == EOF))
-      return *this;
-
-    bool neg = false;
-    if constexpr (std::is_signed_v<T>) {
-      if (c == '-') {
-        neg = true;
-        c = get_char();
-      }
-    }
-
-    for (; (unsigned char)(c - '0') < 10; c = get_char()) {
-      val = val * 10 + (c - '0');
-    }
-
-    if constexpr (std::is_signed_v<T>) {
-      if (neg)
-        val = -val;
-    }
-    return *this;
-  }
-
-  inline Scanner &operator>>(char &c) {
-    c = skip_whitespace();
-    return *this;
-  }
-
-  inline Scanner &operator>>(std::string &s) {
-    s.clear();
-    char c = skip_whitespace();
-    if (CALAFITE_UNLIKELY(c == EOF))
-      return *this;
-    do {
-      s.push_back(c);
-      c = get_char();
-    } while (c != EOF && c > ' ');
-    return *this;
-  }
-
-  template <typename T1, typename T2>
-  inline Scanner &operator>>(std::pair<T1, T2> &p) {
-    return *this >> p.first >> p.second;
-  }
-
-  template <typename T> inline Scanner &operator>>(std::vector<T> &v) {
-    for (auto &x : v)
-      *this >> x;
-    return *this;
-  }
-
-  template <typename T, size_t N>
-  inline Scanner &operator>>(std::array<T, N> &a) {
-    for (auto &x : a)
-      *this >> x;
-    return *this;
-  }
-};
-
 struct Printer {
-  static constexpr size_t BUF_SIZE = 1 << 17;
+  static constexpr int BUF_SIZE = 1 << 17;
   char buf[BUF_SIZE];
   char *ptr = buf;
   char num_lut[200];
@@ -136,20 +44,20 @@ struct Printer {
 
   inline void flush() {
     if (ptr != buf) {
-      CALAFITE_FWRITE(buf, 1, ptr - buf, stdout);
+      CALAFITE_WRITE(buf, ptr - buf);
       ptr = buf;
     }
   }
 
   inline void put_char(char c) {
-    if (CALAFITE_UNLIKELY(ptr - buf >= BUF_SIZE - 1))
+    if (CALAFITE_UNLIKELY(ptr + 1 >= buf + BUF_SIZE))
       flush();
     *ptr++ = c;
   }
 
   template <typename T>
   inline std::enable_if_t<std::is_integral_v<T>, Printer &> operator<<(T val) {
-    if (CALAFITE_UNLIKELY(ptr - buf >= BUF_SIZE - 32))
+    if (CALAFITE_UNLIKELY(ptr + 32 >= buf + BUF_SIZE))
       flush();
 
     using U = std::make_unsigned_t<T>;
@@ -232,8 +140,123 @@ struct Printer {
   }
 };
 
-inline Scanner in;
 inline Printer out;
+
+struct Scanner {
+  static constexpr int BUF_SIZE = 1 << 17;
+  char buf[BUF_SIZE];
+  char *ptr = buf;
+  char *end = buf;
+  bool eof_flag = false;
+
+  inline bool reload() {
+    out.flush();
+    int res = CALAFITE_READ(buf, BUF_SIZE);
+    if (res <= 0) {
+      eof_flag = true;
+      return false;
+    }
+    ptr = buf;
+    end = buf + res;
+    return true;
+  }
+
+  inline int get_char() {
+    if (CALAFITE_UNLIKELY(ptr == end)) {
+      if (eof_flag || !reload())
+        return EOF;
+    }
+    return static_cast<unsigned char>(*ptr++);
+  }
+
+  inline int skip_whitespace() {
+    int c;
+    while ((c = get_char()) != EOF && c <= ' ') {
+    }
+    return c;
+  }
+
+  explicit operator bool() const { return !eof_flag; }
+
+  template <typename T>
+  inline std::enable_if_t<std::is_integral_v<T>, Scanner &> operator>>(T &val) {
+    val = 0;
+    int c = skip_whitespace();
+    if (CALAFITE_UNLIKELY(c == EOF))
+      return *this;
+
+    bool neg = false;
+    if constexpr (std::is_signed_v<T>) {
+      if (c == '-') {
+        neg = true;
+        c = get_char();
+      }
+    }
+
+    for (; (unsigned char)(c - '0') < 10; c = get_char()) {
+      val = val * 10 + (c - '0');
+    }
+
+    if constexpr (std::is_signed_v<T>) {
+      if (neg)
+        val = -val;
+    }
+    return *this;
+  }
+
+  inline Scanner &operator>>(char &c) {
+    int res = skip_whitespace();
+    if (res != EOF)
+      c = static_cast<char>(res);
+    return *this;
+  }
+
+  inline Scanner &operator>>(std::string &s) {
+    s.clear();
+    int c = skip_whitespace();
+    if (CALAFITE_UNLIKELY(c == EOF))
+      return *this;
+    do {
+      s.push_back(static_cast<char>(c));
+      c = get_char();
+    } while (c != EOF && c > ' ');
+    return *this;
+  }
+
+  inline Scanner &operator>>(char *s) {
+    int c = skip_whitespace();
+    if (CALAFITE_UNLIKELY(c == EOF)) {
+      *s = '\0';
+      return *this;
+    }
+    do {
+      *s++ = static_cast<char>(c);
+      c = get_char();
+    } while (c != EOF && c > ' ');
+    *s = '\0';
+    return *this;
+  }
+
+  template <typename T1, typename T2>
+  inline Scanner &operator>>(std::pair<T1, T2> &p) {
+    return *this >> p.first >> p.second;
+  }
+
+  template <typename T> inline Scanner &operator>>(std::vector<T> &v) {
+    for (auto &x : v)
+      *this >> x;
+    return *this;
+  }
+
+  template <typename T, size_t N>
+  inline Scanner &operator>>(std::array<T, N> &a) {
+    for (auto &x : a)
+      *this >> x;
+    return *this;
+  }
+};
+
+inline Scanner in;
 
 template <typename... Args> inline void read(Args &...args) {
   (in >> ... >> args);

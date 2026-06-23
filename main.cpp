@@ -31,8 +31,12 @@
 using namespace std;
 using namespace calafite;
 
-CALAFITE_MAKE_ARENA_GLOBAL
+#define cin calafite::io::in
+#define cout calafite::io::out
 
-int main() {
-  calafite::arena::ScopedArena _arena;
-}
+using calafite::io::print;
+using calafite::io::println;
+using calafite::io::read;
+
+CALAFITE_MAKE_ARENA_GLOBAL
+int main() { calafite::arena::ScopedArena _arena; }
