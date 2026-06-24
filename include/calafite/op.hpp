@@ -1,9 +1,53 @@
 #pragma once
 
+#include <cmath>
 #include <numeric>
 
 namespace calafite {
 namespace ops {
+
+namespace eps {
+inline constexpr double default_eps = 1e-9;
+
+#define CALAFITE_MAKE_EPS_OP(name, expr)                                       \
+  struct _##name {                                                             \
+    double e;                                                                  \
+    constexpr _##name(double e = default_eps) : e(e) {}                        \
+    template <typename T, typename U>                                          \
+    constexpr bool operator()(const T &a, const U &b) const {                  \
+      return expr;                                                             \
+    }                                                                          \
+    template <typename U> constexpr auto operator()(const U &b) const {        \
+      return [b, e = e](const auto &a) { return _##name{e}(a, b); };           \
+    }                                                                          \
+    constexpr _##name with_eps(double new_e) const { return _##name{new_e}; }  \
+  };                                                                           \
+  inline constexpr _##name name{default_eps};
+
+CALAFITE_MAKE_EPS_OP(eq, (std::abs(a - b) < e))
+CALAFITE_MAKE_EPS_OP(neq, (std::abs(a - b) >= e))
+CALAFITE_MAKE_EPS_OP(lt, (a < b - e))
+CALAFITE_MAKE_EPS_OP(gt, (a > b + e))
+CALAFITE_MAKE_EPS_OP(leq, (a < b + e))
+CALAFITE_MAKE_EPS_OP(geq, (a > b - e))
+
+#undef CALAFITE_MAKE_EPS_OP
+
+#define CALAFITE_MAKE_EPS_UNARY(name, expr)                                    \
+  struct _##name {                                                             \
+    double e;                                                                  \
+    constexpr _##name(double e = default_eps) : e(e) {}                        \
+    constexpr bool operator()(double a) const { return expr; }                 \
+    constexpr _##name with_eps(double new_e) const { return _##name{new_e}; }  \
+  };                                                                           \
+  inline constexpr _##name name{default_eps};
+
+CALAFITE_MAKE_EPS_UNARY(is_zero, (std::abs(a) < e))
+CALAFITE_MAKE_EPS_UNARY(is_pos, (a > e))
+CALAFITE_MAKE_EPS_UNARY(is_neg, (a < -e))
+
+#undef CALAFITE_MAKE_EPS_UNARY
+} // namespace eps
 
 #define CALAFITE_MAKE_OP(name, op)                                             \
   struct _##name {                                                             \
