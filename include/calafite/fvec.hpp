@@ -42,7 +42,8 @@ template <typename T> struct fvec {
       data_ptr = static_cast<T *>(arena::allocate(n * sizeof(T), alignof(T)));
       sz = cap = n;
       if constexpr (!std::is_trivially_default_constructible_v<T>) {
-        for (size_t i = 0; i < n; i++) new (&data_ptr[i]) T();
+        for (size_t i = 0; i < n; i++)
+          new (&data_ptr[i]) T();
       }
     }
   }
@@ -51,7 +52,8 @@ template <typename T> struct fvec {
     if (n > 0) {
       data_ptr = static_cast<T *>(arena::allocate(n * sizeof(T), alignof(T)));
       sz = cap = n;
-      for (size_t i = 0; i < n; i++) new (&data_ptr[i]) T(val);
+      for (size_t i = 0; i < n; i++)
+        new (&data_ptr[i]) T(val);
     }
   }
 
@@ -61,18 +63,21 @@ template <typename T> struct fvec {
       data_ptr = static_cast<T *>(arena::allocate(n * sizeof(T), alignof(T)));
       sz = cap = n;
       size_t i = 0;
-      for (const T &val : init) new (&data_ptr[i++]) T(val);
+      for (const T &val : init)
+        new (&data_ptr[i++]) T(val);
     }
   }
 
   fvec(const fvec &other) {
     if (other.sz > 0) {
-      data_ptr = static_cast<T *>(arena::allocate(other.sz * sizeof(T), alignof(T)));
+      data_ptr =
+          static_cast<T *>(arena::allocate(other.sz * sizeof(T), alignof(T)));
       sz = cap = other.sz;
       if constexpr (std::is_trivially_copyable_v<T>) {
         std::memcpy(data_ptr, other.data_ptr, sz * sizeof(T));
       } else {
-        for (size_t i = 0; i < sz; i++) new (&data_ptr[i]) T(other.data_ptr[i]);
+        for (size_t i = 0; i < sz; i++)
+          new (&data_ptr[i]) T(other.data_ptr[i]);
       }
     }
   }
@@ -84,10 +89,12 @@ template <typename T> struct fvec {
   }
 
   fvec &operator=(const fvec &other) {
-    if (this == &other) return *this;
+    if (this == &other)
+      return *this;
     clear();
     if (other.sz > cap) {
-      data_ptr = static_cast<T *>(arena::allocate(other.sz * sizeof(T), alignof(T)));
+      data_ptr =
+          static_cast<T *>(arena::allocate(other.sz * sizeof(T), alignof(T)));
       cap = other.sz;
     }
     sz = other.sz;
@@ -95,14 +102,16 @@ template <typename T> struct fvec {
       if constexpr (std::is_trivially_copyable_v<T>) {
         std::memcpy(data_ptr, other.data_ptr, sz * sizeof(T));
       } else {
-        for (size_t i = 0; i < sz; i++) new (&data_ptr[i]) T(other.data_ptr[i]);
+        for (size_t i = 0; i < sz; i++)
+          new (&data_ptr[i]) T(other.data_ptr[i]);
       }
     }
     return *this;
   }
 
   fvec &operator=(fvec &&other) noexcept {
-    if (this == &other) return *this;
+    if (this == &other)
+      return *this;
     clear();
     data_ptr = other.data_ptr;
     sz = other.sz;
@@ -116,14 +125,16 @@ template <typename T> struct fvec {
 
   inline void reserve(size_t n) {
     if (n > cap) {
-      T *new_data = static_cast<T *>(arena::allocate(n * sizeof(T), alignof(T)));
+      T *new_data =
+          static_cast<T *>(arena::allocate(n * sizeof(T), alignof(T)));
       if (data_ptr && sz > 0) {
         if constexpr (std::is_trivially_copyable_v<T>) {
           std::memcpy(new_data, data_ptr, sz * sizeof(T));
         } else {
           for (size_t i = 0; i < sz; i++) {
             new (&new_data[i]) T(std::move(data_ptr[i]));
-            if constexpr (!std::is_trivially_destructible_v<T>) data_ptr[i].~T();
+            if constexpr (!std::is_trivially_destructible_v<T>)
+              data_ptr[i].~T();
           }
         }
       }
@@ -134,14 +145,16 @@ template <typename T> struct fvec {
 
   inline void grow() {
     size_t new_cap = cap == 0 ? 4 : cap * 2;
-    T *new_data = static_cast<T *>(arena::allocate(new_cap * sizeof(T), alignof(T)));
+    T *new_data =
+        static_cast<T *>(arena::allocate(new_cap * sizeof(T), alignof(T)));
     if (data_ptr) {
       if constexpr (std::is_trivially_copyable_v<T>) {
         std::memcpy(new_data, data_ptr, sz * sizeof(T));
       } else {
         for (size_t i = 0; i < sz; i++) {
           new (&new_data[i]) T(std::move(data_ptr[i]));
-          if constexpr (!std::is_trivially_destructible_v<T>) data_ptr[i].~T();
+          if constexpr (!std::is_trivially_destructible_v<T>)
+            data_ptr[i].~T();
         }
       }
     }
@@ -150,29 +163,34 @@ template <typename T> struct fvec {
   }
 
   inline void push_back(const T &val) {
-    if (CALAFITE_UNLIKELY(sz == cap)) grow();
+    if (CALAFITE_UNLIKELY(sz == cap))
+      grow();
     new (&data_ptr[sz++]) T(val);
   }
 
   inline void push_back(T &&val) {
-    if (CALAFITE_UNLIKELY(sz == cap)) grow();
+    if (CALAFITE_UNLIKELY(sz == cap))
+      grow();
     new (&data_ptr[sz++]) T(std::move(val));
   }
 
   template <typename... Args> inline void emplace_back(Args &&...args) {
-    if (CALAFITE_UNLIKELY(sz == cap)) grow();
+    if (CALAFITE_UNLIKELY(sz == cap))
+      grow();
     new (&data_ptr[sz++]) T(std::forward<Args>(args)...);
   }
 
   inline void pop_back() {
     assert(sz > 0);
-    if constexpr (!std::is_trivially_destructible_v<T>) data_ptr[sz - 1].~T();
+    if constexpr (!std::is_trivially_destructible_v<T>)
+      data_ptr[sz - 1].~T();
     sz--;
   }
 
   inline void clear() {
     if constexpr (!std::is_trivially_destructible_v<T>) {
-      for (size_t i = 0; i < sz; i++) data_ptr[i].~T();
+      for (size_t i = 0; i < sz; i++)
+        data_ptr[i].~T();
     }
     sz = 0;
   }
@@ -180,18 +198,21 @@ template <typename T> struct fvec {
   inline void resize(size_t n) {
     if (n < sz) {
       if constexpr (!std::is_trivially_destructible_v<T>) {
-        for (size_t i = n; i < sz; i++) data_ptr[i].~T();
+        for (size_t i = n; i < sz; i++)
+          data_ptr[i].~T();
       }
     } else if (n > sz) {
       if (n > cap) {
-        T *new_data = static_cast<T *>(arena::allocate(n * sizeof(T), alignof(T)));
+        T *new_data =
+            static_cast<T *>(arena::allocate(n * sizeof(T), alignof(T)));
         if (data_ptr && sz > 0) {
           if constexpr (std::is_trivially_copyable_v<T>) {
             std::memcpy(new_data, data_ptr, sz * sizeof(T));
           } else {
             for (size_t i = 0; i < sz; i++) {
               new (&new_data[i]) T(std::move(data_ptr[i]));
-              if constexpr (!std::is_trivially_destructible_v<T>) data_ptr[i].~T();
+              if constexpr (!std::is_trivially_destructible_v<T>)
+                data_ptr[i].~T();
             }
           }
         }
@@ -199,7 +220,8 @@ template <typename T> struct fvec {
         cap = n;
       }
       if constexpr (!std::is_trivially_default_constructible_v<T>) {
-        for (size_t i = sz; i < n; i++) new (&data_ptr[i]) T();
+        for (size_t i = sz; i < n; i++)
+          new (&data_ptr[i]) T();
       }
     }
     sz = n;
@@ -213,16 +235,35 @@ template <typename T> struct fvec {
       cap = n;
     }
     sz = n;
-    for (size_t i = 0; i < n; i++) new (&data_ptr[i]) T(copy);
+    for (size_t i = 0; i < n; i++)
+      new (&data_ptr[i]) T(copy);
   }
 
-  inline T &operator[](size_t i) { assert(i < sz); return data_ptr[i]; }
-  inline const T &operator[](size_t i) const { assert(i < sz); return data_ptr[i]; }
+  inline T &operator[](size_t i) {
+    assert(i < sz);
+    return data_ptr[i];
+  }
+  inline const T &operator[](size_t i) const {
+    assert(i < sz);
+    return data_ptr[i];
+  }
 
-  inline T &front() { assert(sz > 0); return data_ptr[0]; }
-  inline const T &front() const { assert(sz > 0); return data_ptr[0]; }
-  inline T &back() { assert(sz > 0); return data_ptr[sz - 1]; }
-  inline const T &back() const { assert(sz > 0); return data_ptr[sz - 1]; }
+  inline T &front() {
+    assert(sz > 0);
+    return data_ptr[0];
+  }
+  inline const T &front() const {
+    assert(sz > 0);
+    return data_ptr[0];
+  }
+  inline T &back() {
+    assert(sz > 0);
+    return data_ptr[sz - 1];
+  }
+  inline const T &back() const {
+    assert(sz > 0);
+    return data_ptr[sz - 1];
+  }
 
   inline T *begin() { return data_ptr; }
   inline T *end() { return data_ptr + sz; }
@@ -234,18 +275,80 @@ template <typename T> struct fvec {
 
   inline void reverse() { std::reverse(begin(), end()); }
 
+  inline int find(const T &val) const {
+    for (size_t i = 0; i < sz; i++) {
+      if (data_ptr[i] == val)
+        return static_cast<int>(i);
+    }
+    return -1;
+  }
+
+  template <typename F> inline int find_if(F &&pred) const {
+    for (size_t i = 0; i < sz; i++) {
+      if (pred(data_ptr[i]))
+        return static_cast<int>(i);
+    }
+    return -1;
+  }
+
+  inline bool contains(const T &val) const { return find(val) != -1; }
+
+  inline void replace(const T &old_val, const T &new_val) {
+    for (size_t i = 0; i < sz; i++) {
+      if (data_ptr[i] == old_val)
+        data_ptr[i] = new_val;
+    }
+  }
+
+  template <typename F> inline auto map(F &&func) const {
+    using R =
+        std::remove_cv_t<std::remove_reference_t<decltype(func(data_ptr[0]))>>;
+    fvec<R> res;
+    res.reserve(sz);
+    for (size_t i = 0; i < sz; i++)
+      res.push_back(func(data_ptr[i]));
+    return res;
+  }
+
+  template <typename F> inline fvec<T> filter(F &&pred) const {
+    fvec<T> res;
+    for (size_t i = 0; i < sz; i++) {
+      if (pred(data_ptr[i]))
+        res.push_back(data_ptr[i]);
+    }
+    return res;
+  }
+
+  template <typename U, typename F> inline U reduce(U init, F &&func) const {
+    U res = init;
+    for (size_t i = 0; i < sz; i++)
+      res = func(res, data_ptr[i]);
+    return res;
+  }
+
+  inline int count(const T &val) const {
+    int cnt = 0;
+    for (size_t i = 0; i < sz; i++) {
+      if (data_ptr[i] == val)
+        cnt++;
+    }
+    return cnt;
+  }
+
   inline void unique() {
-    if (sz == 0) return;
+    if (sz == 0)
+      return;
     sz = std::unique(begin(), end()) - begin();
   }
 
   inline void sort() {
-    if (sz < 2) return;
+    if (sz < 2)
+      return;
 
     if constexpr (std::is_integral_v<T> && (sizeof(T) == 4 || sizeof(T) == 8)) {
       using U = std::make_unsigned_t<T>;
       U *src = reinterpret_cast<U *>(data_ptr);
-      
+
       U *dst = static_cast<U *>(std::malloc(sz * sizeof(T)));
       if (!dst) {
         std::sort(begin(), end());
@@ -259,22 +362,25 @@ template <typename T> struct fvec {
 
         for (size_t i = 0; i < sz; i++) {
           uint8_t byte = (src[i] >> shift) & 0xFF;
-          if (is_last_pass) byte ^= 128;
+          if (is_last_pass)
+            byte ^= 128;
           count[byte]++;
         }
 
         uint32_t pos[256];
         pos[0] = 0;
-        for (int i = 1; i < 256; i++) pos[i] = pos[i - 1] + count[i - 1];
+        for (int i = 1; i < 256; i++)
+          pos[i] = pos[i - 1] + count[i - 1];
 
         for (size_t i = 0; i < sz; i++) {
           uint8_t byte = (src[i] >> shift) & 0xFF;
-          if (is_last_pass) byte ^= 128;
+          if (is_last_pass)
+            byte ^= 128;
           dst[pos[byte]++] = src[i];
         }
         std::swap(src, dst);
       }
-      std::free(dst);  
+      std::free(dst);
     } else {
       std::sort(begin(), end());
     }
