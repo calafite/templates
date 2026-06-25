@@ -23,6 +23,8 @@
 #include "ds/segmentTree.hpp"
 #include "ds/sparseTable.hpp"
 #include "ds/trie.hpp"
+#include "ds/monotonicStack.hpp"
+#include "ds/cartesianTree.hpp"
 
 // custom io
 #include "io/io.hpp"
