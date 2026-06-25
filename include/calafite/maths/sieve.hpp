@@ -13,34 +13,35 @@ template <typename T = int> struct Sieve {
   fvec<bool> is_prime;
   fvec<int> primes;
 
-  Sieve(int n) : n(n), is_prime(n + 1, true) {
-    if (n >= 0)
+  Sieve(int n) : n(n), is_prime((n >> 1) + 1, true) {
+    if (is_prime.size() > 0)
       is_prime[0] = false;
-    if (n >= 1)
-      is_prime[1] = false;
-
-    for (int i = 4; i <= n; i += 2)
-      is_prime[i] = false;
 
     for (int p = 3; 1LL * p * p <= n; p += 2) {
-      if (is_prime[p])
-        for (int i = p * p; i <= n; i += p * 2)
-          is_prime[i] = false;
+      if (is_prime[p >> 1]) {
+        for (long long i = 1LL * p * p; i <= n; i += p * 2) {
+          is_prime[i >> 1] = false;
+        }
+      }
     }
 
     if (n >= 2) {
       primes.reserve(n / log(n) * 1.2 + 16);
       primes.push_back(2);
       for (int i = 3; i <= n; i += 2)
-        if (is_prime[i])
+        if (is_prime[i >> 1])
           primes.push_back(i);
     }
   }
 
   bool query(T x) const {
-    if (x < 0 || x > n)
+    if (x < 2 || x > n)
       return false;
-    return is_prime[x];
+    if (x == 2)
+      return true;
+    if ((x & 1) == 0)
+      return false;
+    return is_prime[x >> 1];
   }
 
   T count(T x) const {
