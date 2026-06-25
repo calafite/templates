@@ -1,38 +1,42 @@
 #pragma once
 
-//core
+// core
 #include "core/arena.hpp"
 #include "core/fastVector.hpp"
 #include "core/ops.hpp"
 
-//container
+// container
 #include "container/hashMap.hpp"
 
-
-//data structures
+// data structures
 #include "ds/compressor.hpp"
 #include "ds/disjointSetUnion.hpp"
 #include "ds/fenwickTree.hpp"
+#include "ds/lazySegmentTree.hpp"
 #include "ds/segmentTree.hpp"
 #include "ds/sparseTable.hpp"
+#include "ds/trie.hpp"
 
-//custom io
+// custom io
 #include "io/io.hpp"
 
-//mathematics
+// mathematics
 #include "maths/linearSieve.hpp"
+#include "maths/matrix.hpp"
+#include "maths/mint.hpp"
 #include "maths/sieve.hpp"
 
-//string algorithms
+// search algorithms
+#include "search/dijkstra.hpp"
+#include "search/graphBFS.hpp"
+#include "search/graphDFS.hpp"
+#include "search/treeBFS.hpp"
+#include "search/treeDFS.hpp"
+
+// string algorithms
 #include "string/KnuthMorrisPratt.hpp"
 #include "string/zAlgorithm.hpp"
 
-//utilities
+// utilities
 #include "utils/fixPoint.hpp"
 #include "utils/utils.hpp"
-
-//search algorithms
-#include "search/graphBFS.hpp"
-#include "search/treeBFS.hpp"
-#include "search/graphDFS.hpp"
-#include "search/treeDFS.hpp"
