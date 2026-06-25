@@ -4,7 +4,6 @@
 
 namespace calafite {
 
-namespace string {
 template <typename Container> fvec<int> z_function(const Container &s) {
   int n = static_cast<int>(s.size());
 
@@ -26,7 +25,6 @@ template <typename Container> fvec<int> z_function(const Container &s) {
     }
   }
   return z;
-}
 } // namespace string
 
 struct ZF {
