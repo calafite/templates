@@ -1,112 +1,108 @@
 #pragma once
-#include "../core/fvec.hpp"
+
+#include "../core/fastVector.hpp"
+#include <cassert>
+#include <cstddef>
 #include <utility>
 
 namespace calafite {
+    namespace string {
 
-template <typename Container> fvec<int> prefix_function(const Container &s) {
-  int n = static_cast<int>(s.size());
-  fvec<int> pi(n, 0);
-  if (n == 0)
-    return pi;
+        template<typename Container> core::FastVector<size_t> prefixFunction(const Container& string) {
+            size_t sizeValue = string.size();
+            core::FastVector<size_t> prefixTable(sizeValue, 0);
+            if (sizeValue == 0) return prefixTable;
 
-  const auto *data = s.data();
-  for (int i = 1; i < n; i++) {
-    int j = pi[i - 1];
-    while (j > 0 && data[i] != data[j]) {
-      j = pi[j - 1];
+            const auto* data = string.data();
+            for (size_t index = 1; index < sizeValue; ++index) {
+                size_t matchLength = prefixTable[index - 1];
+                while (matchLength > 0 && data[index] != data[matchLength]) {
+                    matchLength = prefixTable[matchLength - 1];
+                }
+                if (data[index] == data[matchLength]) ++matchLength;
+                prefixTable[index] = matchLength;
+            }
+            return prefixTable;
+        }
+
+        template<typename Type> struct KnuthMorrisPratt {
+            Type pattern;
+            core::FastVector<size_t> prefixTable;
+            size_t patternSize;
+            size_t currentState = 0;
+
+            KnuthMorrisPratt() : patternSize(0) {}
+
+            explicit KnuthMorrisPratt(Type pattern)
+                : pattern(std::move(pattern)), patternSize(this->pattern.size()) {
+                prefixTable = prefixFunction(this->pattern);
+            }
+
+            template<typename Container> core::FastVector<size_t> search(const Container& text) const {
+                core::FastVector<size_t> result;
+                size_t textSize = text.size();
+                if (patternSize == 0 || textSize == 0 || patternSize > textSize) return result;
+
+                result.reserve(textSize / patternSize + 2);
+
+                const auto* textData = text.data();
+                const auto* patternData = pattern.data();
+                size_t matchLength = 0;
+
+                for (size_t index = 0; index < textSize; ++index) {
+                    while (matchLength > 0 && textData[index] != patternData[matchLength]) {
+                        matchLength = prefixTable[matchLength - 1];
+                    }
+                    if (textData[index] == patternData[matchLength]) {
+                        ++matchLength;
+                    }
+                    if (matchLength == patternSize) {
+                        result.pushBack(index - patternSize + 1);
+                        matchLength = prefixTable[matchLength - 1];
+                    }
+                }
+                return result;
+            }
+
+            template<typename Container> size_t findFirst(const Container& text) const {
+                size_t textSize = text.size();
+                if (patternSize == 0 || textSize == 0 || patternSize > textSize) return static_cast<size_t>(-1);
+
+                const auto* textData = text.data();
+                const auto* patternData = pattern.data();
+                size_t matchLength = 0;
+
+                for (size_t index = 0; index < textSize; ++index) {
+                    while (matchLength > 0 && textData[index] != patternData[matchLength]) {
+                        matchLength = prefixTable[matchLength - 1];
+                    }
+                    if (textData[index] == patternData[matchLength]) {
+                        ++matchLength;
+                    }
+                    if (matchLength == patternSize) {
+                        return index - patternSize + 1;
+                    }
+                }
+                return static_cast<size_t>(-1);
+            }
+
+            void reset() { currentState = 0; }
+
+            template<typename CharacterType> bool feed(const CharacterType& character) {
+                if (patternSize == 0) return false;
+                const auto* patternData = pattern.data();
+
+                while (currentState > 0 && character != patternData[currentState]) {
+                    currentState = prefixTable[currentState - 1];
+                }
+                if (character == patternData[currentState]) ++currentState;
+                if (currentState == patternSize) {
+                    currentState = prefixTable[currentState - 1];
+                    return true;
+                }
+                return false;
+            }
+        };
+
     }
-    if (data[i] == data[j]) {
-      j++;
-    }
-    pi[i] = j;
-  }
-  return pi;
 }
-
-template <typename T> struct KMP {
-  T pattern;
-  fvec<int> pi;
-  int m;
-
-  int current_state = 0;
-
-  KMP() : m(0) {}
-
-  explicit KMP(T pat)
-      : pattern(std::move(pat)), m(static_cast<int>(pattern.size())) {
-    pi = prefix_function(pattern);
-  }
-
-  template <typename U> fvec<int> search(const U &text) const {
-    fvec<int> res;
-    int n = static_cast<int>(text.size());
-    if (m == 0 || n == 0 || m > n)
-      return res;
-
-    res.reserve(n / m + 2);
-
-    const auto *txt = text.data();
-    const auto *pat = pattern.data();
-    int j = 0;
-
-    for (int i = 0; i < n; i++) {
-      while (j > 0 && txt[i] != pat[j]) {
-        j = pi[j - 1];
-      }
-      if (txt[i] == pat[j]) {
-        j++;
-      }
-      if (j == m) {
-        res.push_back(i - m + 1);
-        j = pi[j - 1];
-      }
-    }
-    return res;
-  }
-
-  template <typename U> int find_first(const U &text) const {
-    int n = static_cast<int>(text.size());
-    if (m == 0 || n == 0 || m > n)
-      return -1;
-
-    const auto *txt = text.data();
-    const auto *pat = pattern.data();
-    int j = 0;
-
-    for (int i = 0; i < n; i++) {
-      while (j > 0 && txt[i] != pat[j]) {
-        j = pi[j - 1];
-      }
-      if (txt[i] == pat[j]) {
-        j++;
-      }
-      if (j == m) {
-        return i - m + 1;
-      }
-    }
-    return -1;
-  }
-
-  void reset() { current_state = 0; }
-
-  template <typename CharT> bool feed(const CharT &c) {
-    if (m == 0)
-      return false;
-    const auto *pat = pattern.data();
-
-    while (current_state > 0 && c != pat[current_state]) {
-      current_state = pi[current_state - 1];
-    }
-    if (c == pat[current_state]) {
-      current_state++;
-    }
-    if (current_state == m) {
-      current_state = pi[current_state - 1];
-      return true;
-    }
-    return false;
-  }
-};
-
-} // namespace calafite
