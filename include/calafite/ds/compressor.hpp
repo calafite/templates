@@ -1,6 +1,6 @@
 #pragma once
 
-#include "fvec.hpp"
+#include "../core/fvec.hpp"
 #include <algorithm>
 
 namespace calafite {

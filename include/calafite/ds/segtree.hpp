@@ -1,5 +1,5 @@
 #pragma once
-#include "fvec.hpp"
+#include "../core/fvec.hpp"
 #include <utility>
 
 namespace calafite {

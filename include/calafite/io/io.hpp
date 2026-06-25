@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include "fvec.hpp"
+#include "../core/fvec.hpp"
 
 #if defined(_WIN32)
 #include <io.h>

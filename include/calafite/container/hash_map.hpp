@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <utility>
 #include <functional>
-#include "fvec.hpp"
+#include "../core/fvec.hpp"
 
 namespace calafite {
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "fvec.hpp"
+#include "../core/fvec.hpp"
 
 namespace calafite {
 template <typename T> struct FenwickTree {

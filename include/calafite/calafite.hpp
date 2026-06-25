@@ -1,13 +1,40 @@
 #pragma once
 
-#include "arena.hpp"
-#include "io.hpp"
-#include "fenwick_tree.hpp"
-#include "linear_sieve.hpp"
-#include "segtree.hpp"
-#include "sieve.hpp"
-#include "sparse_table.hpp"
-#include "fvec.hpp"
-#include "hash_map.hpp"
-#include "op.hpp"
-#include "compressor.hpp"
+// ==========================================
+// 1. Core Primitives & Foundation
+// ==========================================
+#include "core/arena.hpp"
+#include "core/fvec.hpp"
+#include "core/ops.hpp"
+
+// ==========================================
+// Input / Output
+// ==========================================
+#include "io/io.hpp"
+
+// ==========================================
+// Containers
+// ==========================================
+#include "container/hash_map.hpp"
+
+// ==========================================
+// Algorithm & Search Processing
+// ==========================================
+
+// ==========================================
+// Query & Range Data Structures
+// ==========================================
+#include "ds/compressor.hpp"
+#include "ds/fenwick_tree.hpp"
+#include "ds/segtree.hpp"
+#include "ds/sparse_table.hpp"
+
+// ==========================================
+// Mathematics
+// ==========================================
+#include "math/sieve.hpp"
+#include "math/linear_sieve.hpp"
+
+// ==========================================
+// Graph & Strings
+// ==========================================

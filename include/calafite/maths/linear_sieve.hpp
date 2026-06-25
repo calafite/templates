@@ -2,7 +2,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cassert>
-#include "fvec.hpp"
+#include "../core/fvec.hpp"
 
 namespace calafite {
 template <typename T> struct LinearSieve {

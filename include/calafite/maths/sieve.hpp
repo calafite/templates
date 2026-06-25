@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include "fvec.hpp"
+#include "../core/fvec.hpp"
 
 namespace calafite {
 template <typename T = int> struct Sieve {
