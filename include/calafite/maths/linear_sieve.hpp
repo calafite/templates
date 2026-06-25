@@ -29,7 +29,7 @@ template <typename T> struct LinearSieve {
 
       for (size_t j = 1; j < primes.size(); ++j) {
         T p = primes[j];
-        if (p > this->n / i)
+        if (1LL * p * i > this->n)
           break;
         spf[(i * p) >> 1] = p;
         if (p == spf[half_i])
