@@ -99,6 +99,31 @@ namespace calafite {
                 return *this;
             }
 
+            inline void writeSeq(int start, int step, int count) {
+                for (int i = 0, v = start; i < count; ++i, v += step) {
+                    if (CALAFITE_UNLIKELY(pointer + 11 >= buffer + BUFFER_SIZE)) flush();
+    
+                    unsigned u = static_cast<unsigned>(v);
+                    char tmp[10]; int len = 0;
+                    
+                    while (u >= 100) {
+                        unsigned r = u % 100; u /= 100;
+                        tmp[len++] = numberLookupTable[r * 2 + 1];
+                        tmp[len++] = numberLookupTable[r * 2];
+                    }
+
+                    if (u >= 10) {
+                        tmp[len++] = numberLookupTable[u * 2 + 1];
+                        tmp[len++] = numberLookupTable[u * 2];
+                    } else {
+                        tmp[len++] = static_cast<char>('0' + u);
+                    }
+
+                    for (int j = len - 1; j >= 0; --j) *pointer++ = tmp[j];
+                    *pointer++ = ' ';
+                }
+            }
+
             inline Printer& operator<<(char character) {
                 putChar(character);
                 return *this;
@@ -281,6 +306,5 @@ namespace calafite {
             print(arguments...);
             out << '\n';
         }
-
     }
 }
