@@ -10,6 +10,15 @@
 #include <type_traits>
 #include <utility>
 
+#if defined(__has_include)
+    #if __has_include(<version>)
+        #include <version>
+    #endif
+    #if __has_include(<ranges>)
+        #include <ranges>
+    #endif
+#endif
+
 #ifndef CALAFITE_UNLIKELY
 #if defined(__GNUC__) || defined(__clang__)
 #define CALAFITE_UNLIKELY(x) __builtin_expect(!!(x), 0)
@@ -395,7 +404,139 @@ namespace calafite {
             template<typename Compare> inline void sort(Compare comparison) {
                 std::sort(begin(), end(), comparison);
             }
+
+#if defined(__cpp_lib_ranges)
+            auto iter();
+            auto iter() const;
+#endif
         };
+
+#if defined(__cpp_lib_ranges)
+
+    template<std::ranges::view View>
+    struct FastVectorIterator {
+        View view;
+
+        constexpr explicit FastVectorIterator(View v) : view(std::move(v)) {}
+
+        // Lazy Operations
+
+        template<typename Function>
+        constexpr auto map(Function&& function) {
+            auto next = view | std::views::transform(std::forward<Function>(function));
+            return FastVectorIterator<decltype(next)>(std::move(next));
+        }
+
+        template<typename Predicate>
+        constexpr auto filter(Predicate&& predicate) {
+            auto next = view | std::views::filter(std::forward<Predicate>(predicate));
+            return FastVectorIterator<decltype(next)>(std::move(next));
+        }
+
+        constexpr auto take(size_t n) {
+            auto next = view | std::views::take(n);
+            return FastVectorIterator<decltype(next)>(std::move(next));
+        }
+
+        constexpr auto drop(size_t n) {
+            auto next = view | std::views::drop(n);
+            return FastVectorIterator<decltype(next)>(std::move(next));
+        }
+
+        template<typename Predicate>
+        constexpr auto take_while(Predicate&& predicate) {
+            auto next = view | std::views::take_while(std::forward<Predicate>(predicate));
+            return FastVectorIterator<decltype(next)>(std::move(next));
+        }
+
+        template<typename Predicate>
+        constexpr auto drop_while(Predicate&& predicate) {
+            auto next = view | std::views::drop_while(std::forward<Predicate>(predicate));
+            return FastVectorIterator<decltype(next)>(std::move(next));
+        }
+
+        constexpr auto reverse() {
+            auto next = view | std::views::reverse;
+            return FastVectorIterator<decltype(next)>(std::move(next));
+        }
+
+        // Eager Operations
+        
+        constexpr auto collect() {
+            using RangeRef = std::ranges::range_reference_t<View>;
+            using RangeVal = std::remove_cvref_t<RangeRef>;
+            
+            FastVector<RangeVal> result;
+
+            if constexpr (std::ranges::sized_range<View>) {
+                result.reserve(std::ranges::size(view));
+            }
+
+            for (auto&& item : view) {
+                result.pushBack(std::forward<decltype(item)>(item));
+            }
+
+            return result;
+        }
+
+        template<typename Accumulator, typename Function>
+        constexpr auto fold(Accumulator initial, Function&& function) {
+            Accumulator result = std::move(initial);
+            for (auto&& item : view) {
+                result = function(std::move(result), std::forward<decltype(item)>(item));
+            }
+            return result;
+        }
+
+        template<typename Function>
+        constexpr void for_each(Function&& function) {
+            for (auto&& item : view) {
+                function(std::forward<decltype(item)>(item));
+            }
+        }
+
+        template<typename Predicate>
+        constexpr bool any(Predicate&& predicate) {
+            for (auto&& item : view) {
+                if (predicate(item)) return true;
+            }
+            return false;
+        }
+
+        template<typename Predicate>
+        constexpr bool all(Predicate&& predicate) {
+            for (auto&& item : view) {
+                if (!predicate(item)) return false;
+            }
+            return true;
+        }
+
+        constexpr size_t count() {
+            if constexpr (std::ranges::sized_range<View>) {
+                return std::ranges::size(view);
+            } else {
+                size_t total = 0;
+                for ([[maybe_unused]] auto&& item : view) {
+                    ++total;
+                }
+                return total;
+            }
+        }
+    };
+
+    template<typename Type>
+    auto FastVector<Type>::iter() {
+        auto v = std::views::all(*this);
+        return FastVectorIterator<decltype(v)>(std::move(v));
+    }
+
+    template<typename Type>
+    auto FastVector<Type>::iter() const {
+        auto v = std::views::all(*this);
+        return FastVectorIterator<decltype(v)>(std::move(v));
+    }
+
+#endif
 
     }
 }
