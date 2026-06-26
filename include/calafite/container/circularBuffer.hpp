@@ -518,12 +518,12 @@ namespace calafite {
             }
 
             #if defined(__cpp_lib_ranges)
-            inline auto iterator() {
+            inline auto iterate() {
                 auto v = std::views::all(*this);
                 return ::calafite::core::IteratorPipeline<decltype(v)>(std::move(v));
             }
 
-            inline auto iterator() const {
+            inline auto iterate() const {
                 auto v = std::views::all(*this);
                 return ::calafite::core::IteratorPipeline<decltype(v)>(std::move(v));
             }

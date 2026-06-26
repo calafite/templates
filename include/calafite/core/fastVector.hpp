@@ -36,8 +36,6 @@ namespace calafite {
             using const_reference = const Type&;
             using pointer = Type*;
             using const_pointer = const Type*;
-            using iterator = Type*;
-            using const_iterator = const Type*;
 
             Type* data = nullptr;
             size_t sizeValue = 0;
@@ -404,12 +402,12 @@ namespace calafite {
             }
 
             #if defined(__cpp_lib_ranges)
-            inline auto iterator() {
+            inline auto iterate() {
                 auto v = std::views::all(*this);
                 return IteratorPipeline<decltype(v)>(std::move(v));
             }
 
-            inline auto iterator() const {
+            inline auto iterate() const {
                 auto v = std::views::all(*this);
                 return IteratorPipeline<decltype(v)>(std::move(v));
             }
