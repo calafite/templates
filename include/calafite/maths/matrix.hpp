@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstddef>
 #include <initializer_list>
+#include <type_traits>
 #include <utility>
 
 namespace calafite {
@@ -114,6 +115,7 @@ namespace calafite {
                 for (size_t i = 0; i < data.size(); ++i) data[i] = data[i] * scalar;
                 return *this;
             }
+
             Matrix operator*(const Type& scalar) const { return Matrix(*this) *= scalar; }
 
             Matrix& operator/=(const Type& scalar) {
@@ -145,40 +147,9 @@ namespace calafite {
             }
 
             [[nodiscard]] Type determinant() const {
-                assert(rowsValue == colsValue);
-                Matrix mat = *this;
-                Type det = Type(1);
-                size_t n = rowsValue;
-
-                for (size_t i = 0; i < n; ++i) {
-                    size_t pivot = i;
-                    for (size_t j = i + 1; j < n; ++j) {
-                        if (mat[j][i] != Type(0)) {
-                            pivot = j;
-                            break;
-                        }
-                    }
-                    if (mat[pivot][i] == Type(0)) return Type(0);
-                    
-                    if (pivot != i) {
-                        for (size_t j = i; j < n; ++j) std::swap(mat[i][j], mat[pivot][j]);
-                        det = Type(0) - det;
-                    }
-                    
-                    det = det * mat[i][i];
-                    Type inversePivot = Type(1) / mat[i][i];
-                    for (size_t j = i + 1; j < n; ++j) {
-                        if (mat[j][i] != Type(0)) {
-                            Type factor = mat[j][i] * inversePivot;
-                            for (size_t k = i; k < n; ++k) {
-                                mat[j][k] = mat[j][k] - factor * mat[i][k];
-                            }
-                        }
-                    }
-                }
-                return det;
+                return determinantImpl(std::is_integral<Type>{});
             }
-
+            
             [[nodiscard]] Matrix inverse(bool* possible = nullptr) const {
                 assert(rowsValue == colsValue);
                 size_t n = rowsValue;
@@ -193,10 +164,12 @@ namespace calafite {
                             break;
                         }
                     }
+                    
                     if (mat[pivot][i] == Type(0)) {
                         if (possible) *possible = false;
-                        return res; // Singular matrix
+                        return res; 
                     }
+                    
                     if (pivot != i) {
                         for (size_t j = 0; j < n; ++j) {
                             std::swap(mat[i][j], mat[pivot][j]);
@@ -264,6 +237,120 @@ namespace calafite {
                 }
                 return res;
             }
+
+            private:
+            [[nodiscard]] Type determinantImpl(std::true_type) const {
+                assert(rowsValue == colsValue && "Matrix must be square.");
+                if (rowsValue == 0) return Type(1);
+                if (rowsValue == 1) return data[0];
+
+                Matrix workingMatrix = *this;
+                size_t matrixSize = rowsValue;
+                Type previousPivot = Type(1);
+                int signValue = 1;
+
+                for (size_t pivotIndex = 0; pivotIndex < matrixSize - 1; ++pivotIndex) {
+                    size_t pivotRow = pivotIndex;
+                    while (pivotRow < matrixSize && workingMatrix[pivotRow][pivotIndex] == Type(0)) {
+                        ++pivotRow;
+                    }
+
+                    if (pivotRow == matrixSize) {
+                        return Type(0); 
+                    }
+
+                    if (pivotRow != pivotIndex) {
+                        for (size_t columnIndex = pivotIndex; columnIndex < matrixSize; ++columnIndex) {
+                            std::swap(
+                                      workingMatrix[pivotIndex][columnIndex],
+                                      workingMatrix[pivotRow][columnIndex]
+                                );
+                        }
+                        signValue = -signValue;
+                    }
+
+                    Type* rowPivotPointer = workingMatrix[pivotIndex];
+                    Type pivotElement = rowPivotPointer[pivotIndex];
+
+                    for (size_t targetRow = pivotIndex + 1; targetRow < matrixSize; ++targetRow) {
+                        Type* rowTargetPointer = workingMatrix[targetRow];
+                        Type targetLeadingElement = rowTargetPointer[pivotIndex];
+
+                        if (targetLeadingElement == Type(0)) {
+                            if (pivotElement == previousPivot) continue;
+                            for (size_t columnIndex = pivotIndex + 1; columnIndex < matrixSize; ++columnIndex) {
+                                rowTargetPointer[columnIndex] =
+                                    (rowTargetPointer[columnIndex]
+                                     * pivotElement)
+                                    / previousPivot;
+                            }
+                        } else {
+                            for (size_t columnIndex = pivotIndex + 1; columnIndex < matrixSize; ++columnIndex) {
+                                rowTargetPointer[columnIndex] =
+                                    (rowTargetPointer[columnIndex]
+                                     * pivotElement
+                                     - targetLeadingElement
+                                       * rowPivotPointer[columnIndex])
+                                    / previousPivot;
+                            }
+                        }
+                    }
+                    previousPivot = pivotElement;
+                }
+
+                Type determinantResult = workingMatrix[matrixSize - 1][matrixSize - 1];
+                return signValue == 1 ? determinantResult : (Type(0) - determinantResult);
+            }
+
+            [[nodiscard]] Type determinantImpl(std::false_type) const {
+                assert(rowsValue == colsValue && "Matrix must be square.");
+                if (rowsValue == 0) return Type(1);
+                if (rowsValue == 1) return data[0];
+
+                Matrix workingMatrix = *this;
+                Type determinantValue = Type(1);
+                size_t matrixSize = rowsValue;
+
+                for (size_t pivotIndex = 0; pivotIndex < matrixSize; ++pivotIndex) {
+                    size_t pivotRow = pivotIndex;
+                    for (size_t targetRow = pivotIndex + 1; targetRow < matrixSize; ++targetRow) {
+                        if (workingMatrix[targetRow][pivotIndex] != Type(0)) {
+                            pivotRow = targetRow;
+                            break;
+                        }
+                    }
+            
+                    if (workingMatrix[pivotRow][pivotIndex] == Type(0)) {
+                        return Type(0); 
+                    }
+
+                    if (pivotRow != pivotIndex) {
+                        for (size_t columnIndex = pivotIndex; columnIndex < matrixSize; ++columnIndex) {
+                            std::swap(
+                                      workingMatrix[pivotIndex][columnIndex],
+                                      workingMatrix[pivotRow][columnIndex]
+                                  );
+                        }
+                        determinantValue = Type(0) - determinantValue;
+                    }
+
+                    determinantValue = determinantValue * workingMatrix[pivotIndex][pivotIndex];
+                    Type inversePivotValue = Type(1) / workingMatrix[pivotIndex][pivotIndex];
+            
+                    for (size_t targetRow = pivotIndex + 1; targetRow < matrixSize; ++targetRow) {
+                        if (workingMatrix[targetRow][pivotIndex] != Type(0)) {
+                            Type reductionFactor = workingMatrix[targetRow][pivotIndex] * inversePivotValue;
+                            for (size_t columnIndex = pivotIndex; columnIndex < matrixSize; ++columnIndex) {
+                                workingMatrix[targetRow][columnIndex] =
+                                    workingMatrix[targetRow][columnIndex]
+                                    - reductionFactor
+                                    * workingMatrix[pivotIndex][columnIndex];
+                            }
+                        }
+                    }
+                }
+                return determinantValue;
+            }                
         };
 
         template<typename Type>
@@ -285,6 +372,6 @@ namespace calafite {
             }
             return scanner;
         }
-
+        
     }
 }
