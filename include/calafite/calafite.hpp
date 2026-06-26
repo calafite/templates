@@ -53,11 +53,11 @@
 #include "utils/utils.hpp"
 
 // macros
-#define all(x) (x).begin(), (x).end()
-#define debug(x) cerr << #x << " = " << x << "\n"
-#define upto(var, start, end) for (auto var = start; var < end; var++)
-#define downto(var, start, end) for (auto var = start; var > end; var--)
-#define foreach(element, collection) for (auto &element : collection)
+#define _all(x) (x).begin(), (x).end()
+#define _debug(x) cerr << #x << " = " << x << "\n"
+#define _upto(var, start, end) for (auto var = start; var < end; var++)
+#define _downto(var, start, end) for (auto var = start; var > end; var--)
+#define _foreach(element, collection) for (auto &element : collection)
 
 #define CALAFITE_SETUP                                          \
     using namespace std;                                        \
