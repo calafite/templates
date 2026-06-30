@@ -5,10 +5,17 @@
 #include <cstdint>
 #include <cstdlib>
 
+#if defined(__GNUC__) || defined(__clang__)
+#define CALAFITE_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define CALAFITE_UNLIKELY(x) (x)
+#endif
+
 namespace calafite {
     namespace arena {
 
-        struct Chunk {
+        class Chunk {
+          public:
             Chunk* next;
             size_t size;
             char* data() { return reinterpret_cast<char*>(this + 1); }
@@ -20,7 +27,10 @@ namespace calafite {
         inline char* end = nullptr;
         inline bool active = false;
 
-        inline void addChunk(size_t minimum) {
+        inline uintptr_t min_address = UINTPTR_MAX;
+        inline uintptr_t max_address = 0;
+
+        [[gnu::noinline]] inline void addChunk(size_t minimum) {
             size_t size = 1024 * 1024;
             if (current) size = current->size * 2;
             if (size < minimum) size = minimum;
@@ -32,22 +42,33 @@ namespace calafite {
             if (current) current->next = chunk;
             if (!head) head = chunk;
             current = chunk;
+
+            uintptr_t chunk_start = reinterpret_cast<uintptr_t>(chunk->data());
+            uintptr_t chunk_end = chunk_start + size;
+            if (chunk_start < min_address) min_address = chunk_start;
+            if (chunk_end > max_address) max_address = chunk_end;
+        }
+
+        [[gnu::noinline]] inline void* allocate_slow_path(size_t size, size_t alignment) {
+            if (current && current->next && current->next->size >= size + alignment) {
+                current = current->next;
+            } else {
+                addChunk(size + alignment);
+            }
+            pointer = current->data();
+            end = pointer + current->size;
+            
+            uintptr_t aligned = (reinterpret_cast<uintptr_t>(pointer) + alignment - 1) & ~(alignment - 1);
+            pointer = reinterpret_cast<char*>(aligned + size);
+            return reinterpret_cast<void*>(aligned);
         }
 
         inline void* allocate(size_t size, size_t alignment = 16) noexcept {
-            assert(size > 0);
             uintptr_t address = reinterpret_cast<uintptr_t>(pointer);
             uintptr_t aligned = (address + alignment - 1) & ~(alignment - 1);
 
-            if (aligned + size > reinterpret_cast<uintptr_t>(end)) {
-                if (current && current->next && current->next->size >= size + alignment) {
-                    current = current->next;
-                } else {
-                    addChunk(size + alignment);
-                }
-                pointer = current->data();
-                end = pointer + current->size;
-                aligned = (reinterpret_cast<uintptr_t>(pointer) + alignment - 1) & ~(alignment - 1);
+            if (CALAFITE_UNLIKELY(aligned + size > reinterpret_cast<uintptr_t>(end))) {
+                return allocate_slow_path(size, alignment);
             }
 
             pointer = reinterpret_cast<char*>(aligned + size);
@@ -62,20 +83,22 @@ namespace calafite {
         }
 
         inline bool contains(void* target) noexcept {
-            for (Chunk* chunk = head; chunk; chunk = chunk->next) {
-                if (target >= chunk->data() && target < chunk->data() + chunk->size) return true;
+            uintptr_t addr = reinterpret_cast<uintptr_t>(target);
+            if (CALAFITE_UNLIKELY(addr >= min_address && addr < max_address)) {
+                for (Chunk* chunk = head; chunk; chunk = chunk->next) {
+                    if (target >= chunk->data() && target < chunk->data() + chunk->size) return true;
+                }
             }
             return false;
         }
 
-        struct ScopedArena {
+        class ScopedArena {
             ScopedArena() { active = true; }
             ~ScopedArena() {
                 active = false;
                 reset();
             }
         };
-
     }
 }
 
@@ -88,6 +111,8 @@ namespace calafite {
 #define CALAFITE_ALIGNED_FREE(pointer) std::free(pointer)
 #endif
 
+#define CALAFITE_ROUND_UP(size, alignment) (((size) + (alignment) - 1) & ~((alignment) - 1))
+
 #define CALAFITE_MAKE_ARENA_GLOBAL                                             \
   void* operator new(size_t size) {                                            \
     if (calafite::arena::active) return calafite::arena::allocate(size);       \
@@ -98,16 +123,14 @@ namespace calafite {
     return std::malloc(size);                                                  \
   }                                                                            \
   void* operator new(size_t size, std::align_val_t alignmentValue) {           \
-    if (calafite::arena::active) return calafite::arena::allocate(size, static_cast<size_t>(alignmentValue)); \
     size_t alignment = static_cast<size_t>(alignmentValue);                    \
-    size_t remainder = size & (alignment - 1);                                 \
-    return CALAFITE_ALIGNED_ALLOC(alignment, remainder == 0 ? size : size + (alignment - remainder)); \
+    if (calafite::arena::active) return calafite::arena::allocate(size, alignment); \
+    return CALAFITE_ALIGNED_ALLOC(alignment, CALAFITE_ROUND_UP(size, alignment)); \
   }                                                                            \
   void* operator new[](size_t size, std::align_val_t alignmentValue) {         \
-    if (calafite::arena::active) return calafite::arena::allocate(size, static_cast<size_t>(alignmentValue)); \
     size_t alignment = static_cast<size_t>(alignmentValue);                    \
-    size_t remainder = size % alignment;                                       \
-    return CALAFITE_ALIGNED_ALLOC(alignment, remainder == 0 ? size : size + (alignment - remainder)); \
+    if (calafite::arena::active) return calafite::arena::allocate(size, alignment); \
+    return CALAFITE_ALIGNED_ALLOC(alignment, CALAFITE_ROUND_UP(size, alignment)); \
   }                                                                            \
   void operator delete(void* pointer) noexcept {                               \
     if (!pointer || calafite::arena::active || calafite::arena::contains(pointer)) return; \

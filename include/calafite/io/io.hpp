@@ -22,19 +22,25 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 #define CALAFITE_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#define CALAFITE_LIKELY(x)   __builtin_expect(!!(x), 1)
 #else
 #define CALAFITE_UNLIKELY(x) (x)
+#define CALAFITE_LIKELY(x)   (x)
 #endif
 
 namespace calafite {
     namespace io {
 
-        struct Printer {
+        class Printer {
+        public:
             static constexpr size_t BUFFER_SIZE = 1 << 17;
+
+        private:
             char buffer[BUFFER_SIZE];
             char* pointer = buffer;
             char numberLookupTable[200];
 
+        public:
             Printer() {
                 for (size_t index = 0; index < 100; ++index) {
                     numberLookupTable[index * 2] = static_cast<char>('0' + index / 10);
@@ -60,68 +66,102 @@ namespace calafite {
             inline std::enable_if_t<std::is_integral_v<Type>, Printer&> operator<<(Type value) {
                 if (CALAFITE_UNLIKELY(pointer + 32 >= buffer + BUFFER_SIZE)) flush();
 
+                char* p = pointer;
                 using UnsignedType = std::make_unsigned_t<Type>;
                 UnsignedType unsignedValue = value;
+
                 if constexpr (std::is_signed_v<Type>) {
                     if (value < 0) {
-                        *pointer++ = '-';
+                        *p++ = '-';
                         unsignedValue = 0 - unsignedValue;
                     }
                 }
 
                 if (unsignedValue == 0) {
-                    *pointer++ = '0';
+                    *p++ = '0';
+                    pointer = p;
                     return *this;
                 }
 
-                char temporary[24];
-                size_t index = 24;
+                char temporary[32];
+                size_t index = 32;
 
-                while (unsignedValue >= 100) {
+                if constexpr (sizeof(Type) > 4) {
+                    while (unsignedValue >= 1000000000ULL) {
+                        uint32_t chunk = static_cast<uint32_t>(unsignedValue % 1000000000ULL);
+                        unsignedValue /= 1000000000ULL;
+                        for (int i = 0; i < 4; ++i) {
+                            index -= 2;
+                            uint32_t remainder = chunk % 100;
+                            chunk /= 100;
+                            temporary[index] = numberLookupTable[remainder * 2];
+                            temporary[index + 1] = numberLookupTable[remainder * 2 + 1];
+                        }
+                        temporary[--index] = static_cast<char>('0' + chunk);
+                    }
+                }
+                
+                uint32_t val32 = static_cast<uint32_t>(unsignedValue);
+
+                while (val32 >= 100) {
                     index -= 2;
-                    UnsignedType remainder = unsignedValue % 100;
-                    unsignedValue /= 100;
+                    uint32_t remainder = val32 % 100;
+                    val32 /= 100;
                     temporary[index] = numberLookupTable[remainder * 2];
                     temporary[index + 1] = numberLookupTable[remainder * 2 + 1];
                 }
                 
-                if (unsignedValue < 10) {
-                    temporary[--index] = static_cast<char>('0' + unsignedValue);
+                if (val32 < 10) {
+                    temporary[--index] = static_cast<char>('0' + val32);
                 } else {
                     index -= 2;
-                    temporary[index] = numberLookupTable[unsignedValue * 2];
-                    temporary[index + 1] = numberLookupTable[unsignedValue * 2 + 1];
+                    temporary[index] = numberLookupTable[val32 * 2];
+                    temporary[index + 1] = numberLookupTable[val32 * 2 + 1];
                 }
 
-                size_t length = 24 - index;
-                std::memcpy(pointer, temporary + index, length);
-                pointer += length;
+                size_t len = 32 - index;
+                std::memcpy(p, &temporary[index], len);
+                pointer = p + len;
+                
                 return *this;
             }
 
             inline void writeSeq(int start, int step, int count) {
+                char* p = pointer; 
+                
                 for (int i = 0, v = start; i < count; ++i, v += step) {
-                    if (CALAFITE_UNLIKELY(pointer + 11 >= buffer + BUFFER_SIZE)) flush();
+                    if (CALAFITE_UNLIKELY(p + 11 >= buffer + BUFFER_SIZE)) {
+                        pointer = p; 
+                        flush();
+                        p = pointer; 
+                    }
     
-                    unsigned u = static_cast<unsigned>(v);
-                    char tmp[10]; int len = 0;
+                    uint32_t u = static_cast<uint32_t>(v);
+                    char tmp[12];
+                    size_t index = 12;
                     
                     while (u >= 100) {
-                        unsigned r = u % 100; u /= 100;
-                        tmp[len++] = numberLookupTable[r * 2 + 1];
-                        tmp[len++] = numberLookupTable[r * 2];
+                        index -= 2;
+                        uint32_t r = u % 100; u /= 100;
+                        tmp[index] = numberLookupTable[r * 2];
+                        tmp[index + 1] = numberLookupTable[r * 2 + 1];
                     }
 
                     if (u >= 10) {
-                        tmp[len++] = numberLookupTable[u * 2 + 1];
-                        tmp[len++] = numberLookupTable[u * 2];
+                        index -= 2;
+                        tmp[index] = numberLookupTable[u * 2];
+                        tmp[index + 1] = numberLookupTable[u * 2 + 1];
                     } else {
-                        tmp[len++] = static_cast<char>('0' + u);
+                        tmp[--index] = static_cast<char>('0' + u);
                     }
 
-                    for (int j = len - 1; j >= 0; --j) *pointer++ = tmp[j];
-                    *pointer++ = ' ';
+                    size_t len = 12 - index;
+                    std::memcpy(p, &tmp[index], len);
+                    p += len;
+                    *p++ = ' ';
                 }
+                
+                pointer = p;
             }
 
             inline Printer& operator<<(char character) {
@@ -131,12 +171,30 @@ namespace calafite {
 
             inline Printer& operator<<(const char* string) {
                 assert(string != nullptr);
-                while (*string) putChar(*string++);
+                size_t len = std::strlen(string);
+                if (CALAFITE_UNLIKELY(pointer + len >= buffer + BUFFER_SIZE)) {
+                    flush();
+                    if (len >= BUFFER_SIZE) {
+                        CALAFITE_WRITE(string, len);
+                        return *this;
+                    }
+                }
+                std::memcpy(pointer, string, len);
+                pointer += len;
                 return *this;
             }
 
             inline Printer& operator<<(const std::string& string) {
-                for (char character : string) putChar(character);
+                size_t len = string.length();
+                if (CALAFITE_UNLIKELY(pointer + len >= buffer + BUFFER_SIZE)) {
+                    flush();
+                    if (len >= BUFFER_SIZE) {
+                        CALAFITE_WRITE(string.data(), len);
+                        return *this;
+                    }
+                }
+                std::memcpy(pointer, string.data(), len);
+                pointer += len;
                 return *this;
             }
 
@@ -175,12 +233,18 @@ namespace calafite {
 
         inline Printer out;
 
-        struct Scanner {
+        class Scanner {
+        public:
             static constexpr size_t BUFFER_SIZE = 1 << 17;
+
+        private:
             char buffer[BUFFER_SIZE];
             char* pointer = buffer;
             char* end = buffer;
             bool endOfFileFlag = false;
+
+        public:
+            Scanner() = default;
 
             inline bool reload() {
                 out.flush();
@@ -202,9 +266,13 @@ namespace calafite {
             }
 
             inline int skipWhitespace() {
-                int character;
-                while ((character = getChar()) != EOF && character <= ' ') {}
-                return character;
+                while (true) {
+                    char* p = pointer;
+                    while (p < end && *p <= ' ') ++p;
+                    pointer = p;
+                    if (p < end) return static_cast<unsigned char>(*pointer++);
+                    if (!reload()) return EOF;
+                }
             }
 
             explicit operator bool() const { return !endOfFileFlag; }
@@ -223,8 +291,18 @@ namespace calafite {
                     }
                 }
 
-                for (; static_cast<unsigned char>(character - '0') < 10; character = getChar()) {
-                    value = value * 10 + (character - '0');
+                if (CALAFITE_LIKELY(end - pointer >= 32)) {
+                    value = character - '0';
+                    char* p = pointer;
+                    while (static_cast<unsigned char>(*p - '0') < 10) {
+                        value = value * 10 + (*p - '0');
+                        ++p;
+                    }
+                    pointer = p;
+                } else {
+                    for (; static_cast<unsigned char>(character - '0') < 10; character = getChar()) {
+                        value = value * 10 + (character - '0');
+                    }
                 }
 
                 if constexpr (std::is_signed_v<Type>) {
@@ -243,10 +321,25 @@ namespace calafite {
                 string.clear();
                 int character = skipWhitespace();
                 if (CALAFITE_UNLIKELY(character == EOF)) return *this;
-                do {
-                    string.push_back(static_cast<char>(character));
-                    character = getChar();
-                } while (character != EOF && character > ' ');
+                
+                string.push_back(static_cast<char>(character));
+
+                while (true) {
+                    char* p = pointer;
+                    char* start = p;
+                    while (p < end && *p > ' ') ++p;
+                    
+                    if (p > start) {
+                        string.append(start, p - start);
+                        pointer = p;
+                    }
+                    
+                    if (p == end) {
+                        if (!reload()) break;
+                    } else {
+                        break;
+                    }
+                }
                 return *this;
             }
 
@@ -257,10 +350,27 @@ namespace calafite {
                     *string = '\0';
                     return *this;
                 }
-                do {
-                    *string++ = static_cast<char>(character);
-                    character = getChar();
-                } while (character != EOF && character > ' ');
+                
+                *string++ = static_cast<char>(character);
+                
+                while (true) {
+                    char* p = pointer;
+                    char* start = p;
+                    while (p < end && *p > ' ') ++p;
+                    
+                    size_t len = p - start;
+                    if (len > 0) {
+                        std::memcpy(string, start, len);
+                        string += len;
+                        pointer = p;
+                    }
+                    
+                    if (p == end) {
+                        if (!reload()) break;
+                    } else {
+                        break;
+                    }
+                }
                 *string = '\0';
                 return *this;
             }
